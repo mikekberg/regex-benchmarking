@@ -1,0 +1,1 @@
+$\vae.itpie\common\Core\VAE.Common.Network.Tests\Device\Commands\Vendors\{VENDOR NAME}\*.data

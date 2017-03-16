@@ -1,0 +1,1426 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<parserCollection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation='parse.xsd'>
+  <!-- default attributes:
+    <property caseInsensitive="true" required="true"/>
+    <target group="<1..n>"/> : where <1..n> value is the index position from its parent property
+    <transform=""> : no transform
+  -->
+  <commandOutputParser id="1" name="ShowVersion" commandId="1" commandType="Discovery">
+    <parser id="1" start="^Cisco IOS Software, (?!ASR)">
+      <worksWith>
+        <system vendor="Cisco" os="IOS" model="." version="." />
+      </worksWith>
+      <textBlock start="^Cisco IOS Software, (?!ASR)" end="^Switch\s+Ports\s+Model\s+SW\s+Version\s+SW\s+Image">
+        <property>
+          <target table="DiscoveryNetworkNode" column="OperatingSystemName" value="IOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+        </property>
+        <property regex="^Cisco IOS Software, .*?Version (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^cisco (.*?) (.*?) processor \(revision (.*?)\) with (.*?) bytes of memory">
+          <!-- cisco WS-C3750G-48PS (PowerPC405) processor (revision H0) with 131072K bytes of memory. -->
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+        </property>
+        <property regex="^Processor board ID (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+        <property regex="^Base ethernet MAC Address\s*:?(.*?)" required="false">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="2" start="^Cisco Nexus Operating System (NX-OS) Software">
+      <worksWith>
+        <system vendor="Cisco" os="NX-OS" model="." version="." />
+      </worksWith>
+      <textBlock start="^Cisco Nexus Operating System (NX-OS) Software" end="^\s*Processor Board Id">
+        <property>
+          <target table="DiscoveryNetworkNode" column="OperatingSystemName" value="NX-OS" />
+        </property>
+        <property>
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+        </property>
+        <property regex="^\s+cisco (Nexus\d\d\d\d) Chassis ">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+      </textBlock>
+      <textBlock start="^kernel uptime" end="">
+        <property regex="^\s+System version:\s+(\w.*)$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="3" start="^(node|fpc)">
+      <worksWith>
+        <system vendor="Juniper" os="JUNOS" model="." version="." />
+      </worksWith>
+      <!--node0:
+<dashes here>
+Hostname: j5800-mgmtfw-a-aa12-1
+Model: srx5800
+JUNOS Software Release [12.1X47-D40.1]
+
+node1:
+dashes here
+Hostname: j5800-mgmtfw-b-ae11-1
+Model: srx5800
+JUNOS Software Release [12.1X47-D40.1]
+
+{secondary:node1}
+ -->
+      <!--
+ fpc0:
+<dashes here>
+Model: ex4200-48t
+JUNOS Base OS boot [12.3R8.7]
+JUNOS Base OS Software Suite [12.3R8.7]
+ -->
+      <textBlock start="^Model: " end="^JUNOS (Base OS)? Software ">
+        <property regex="^Model:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+        </property>
+        <property regex="^JUNOS (Base OS)? Software .*\[(.*?)\]">
+          <target table="DiscoveryNetworkNode" column="Version" group="1" />
+          <target table="DiscoveryNetworkNode" column="Name" value="JUNOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Juniper" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="4" start="(Foundry Networks|Brocade Communications Systems), Inc.\s*$">
+      <worksWith>
+        <system vendor="Brocade" os="IronWare" model="FES12GCF" version="." />
+      </worksWith>
+      <!--
+read from EEPROM (address 0x00000001) failed
+  SW: Version 04.1.01Tc1 Copyright (c) 1996-2006 Foundry Networks, Inc.
+      Compiled on Apr 01 2009 at 19:16:51 labeled as FES04101
+      (2460784 bytes) from Primary FES04101.bin
+      Boot Monitor: Version 04.1.01Tc4
+  HW: Stackable FES12GCF
+==========================================================================
+      Serial #: Non-exist.
+  330 MHz Power PC processor 8245 (version 129/1014) 66 MHz bus
+  512 KB boot flash memory
+16384 KB code flash memory
+  128 MB DRAM
+The system uptime is 6 days 2 hours 49 minutes 50 seconds
+The system started at 12:27:18 Eastern Thu Aug 15 2013
+      -->
+      <textBlock start="^\s*SW:\s*Version " end="^\s*Serial #">
+        <property regex="^\s*SW:\s*Version (.*?)\s">
+          <target table="DiscoveryNetworkNode" column="Version" group="1" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Brocade" />
+          <target table="DiscoveryNetworkNode" column="Name" value="IronWare" />
+        </property>
+        <property regex="^\s*HW:\s*(.*?)$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+        <property regex="^\s*Serial #:\s*(.*?)$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="10" start="^Cisco IOS XE Software, ">
+      <worksWith>
+        <system vendor="Cisco" os="IOS-XE" model="." version="." />
+      </worksWith>
+      <textBlock start="^Cisco IOS XE Software, " end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="Name" value="IOS-XE" />
+        </property>
+        <property>
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+        </property>
+        <property regex="^Cisco IOS Software, .*?Version (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^cisco\s+(.*?)\s+(.*?)\s+processor\s+\(revision (.*?)\) with (.*?) bytes of memory">
+          <!-- cisco WS-C3750G-48PS (PowerPC405) processor (revision H0) with 131072K bytes of memory. -->
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+        </property>
+        <property regex="^Processor board ID (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="11" start="^Cisco IOS XR Software, ">
+      <worksWith>
+        <system vendor="Cisco" os="IOS-XR" model="." version="." />
+      </worksWith>
+      <textBlock start="^Cisco IOS XR Software, " end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="Name" value="IOS-XR" />
+        </property>
+        <property>
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+        </property>
+        <property regex="^Cisco IOS XR Software, .*?Version (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^(ASR-\d\d\d\d) Chassis\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="12" start="^Cisco Adaptive Security Appliance Software Version ">
+      <worksWith>
+        <system vendor="Cisco" os="ASAS" model="." version="." />
+      </worksWith>
+      <!-- Cisco Adaptive Security Appliance Software Version 9.5(1) -->
+      <textBlock start="^Cisco Adaptive Security Appliance Software Version " end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="Name" value="ASAS" />
+        </property>
+        <property>
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+        </property>
+        <property regex="^Cisco Adaptive Security Appliance Software Version (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^System image file is\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="BootImageFile" />
+        </property>
+        <!-- Hardware:   ASA5585-SSP-60, 24576 MB RAM, CPU Xeon 5600 series 2399 MHz, 2 CPUs (24 cores) -->
+        <property regex="^Hardware:\s+(ASA\d\d\d\d-.*?), (\d+ \w+)\s+RAM, CPU (.*?)\s(\d+\s.Hz)">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+        </property>
+        <property regex="^Serial Number:\s*(\w+)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="13" start="^FWSM Firewall Version ">
+      <worksWith>
+        <system vendor="Cisco" os="FWSMS" model="." version="." />
+      </worksWith>
+      <!--  FWSM Firewall Version 4.1(14) <context> -->
+      <textBlock start="^FWSM Firewall Version " end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="Name" value="FWSMS" />
+        </property>
+        <property>
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+        </property>
+        <property regex="^FWSM Firewall Version (.*)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <!-- Hardware:   WS-SVC-FWM-1, 1024 MB RAM, CPU Pentium III 1000 MHz -->
+        <property regex="^Hardware:\s+(WS-SVC-F.*?), (\d+ \w+)\s+RAM, CPU (.*?)\s(\d+\s.Hz)">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+        </property>
+        <property regex="^Serial Number:\s*(\w+)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="HardwareInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="14" start="^Cisco Application Control Software (ACSW) ">
+      <worksWith>
+        <system vendor="Cisco" os="ACSW" model="." version="." />
+      </worksWith>
+      <textBlock start="^Cisco Application Control Software (ACSW) " end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="Name" value="ACSW" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+        </property>
+        <property regex="^\s*system:\s*Version\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^\s*system image file:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="BootImageFile" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="15" start="^\s*Version:\s*SGOS">
+      <worksWith>
+        <system vendor="BlueCoat" os="SGOS" model="." version="." />
+      </worksWith>
+      <!-- https://bto.bluecoat.com/sites/default/files/tech_pubs/CLI_reference.pdf -->
+      <!--  Version: SGOS 6.2.15.4 Proxy Edition -->
+      <textBlock start="^Version: SGOS\s+\d " end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="Name" value="SGOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="BlueCoat" />
+        </property>
+        <property regex="^Version: SGOS\s+(\d.*?)\s(Proxy|Appliance)">
+          <target table="DiscoveryNetworkNode" column="Version" group="1" />
+          <target table="DiscoveryNetworkNode" column="Model" group="2" />
+          <!-- could not derive the exact model of the appliance CC-->
+        </property>
+        <!-- Serial number: 4309083266 -->
+        <property regex="^Serial number:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="16" start="^\w+\sSeries\s">
+      <worksWith>
+        <system vendor="A10" os="ACOS" model="." version="." />
+      </worksWith>
+      <!--
+AX Series Advanced Traffic Manager AX2100
+Copyright 2007-2010 by A10 Networks, Inc. All A10 Networks products are
+protected by one or more of the following US patents and patents pending:
+7716378, 7675854, 7647635, 7552126, 20090049537, 20080229418, 20080040789,
+20070283429, 20070271598, 20070180101
+
+Advanced Core OS (ACOS) version 2.4.3-P1-SP1, build 3 (Aug-02-2010,17:00)
+Booted from compact flash primary image
+Serial Number: AX2114110xxxxx
+aFleX version: 2.0.0
+Hard disk primary image (default) version 2.4.3-P1-SP1, build 3
+Hard disk secondary image version 2.2.4-p6, build 1
+Compact flash primary image (default) version 2.4.3-P1-SP1, build 3
+Compact flash secondary image version 2.2.4-p6, build 1
+Last configuration saved at Dec-30-2010, 01:17
+Hardware: 8 CPUs(Stepping 10), Dual 146G Hard disks
+Memory 4155 Mbyte, Free Memory 2739 Mbyte
+Current time is Dec-30-2010, 01:47
+The system has been up 0 day, 0 hour, 28 minutes
+  -->
+      <!--
+ Thunder Series Unified Application Service Gateway TH3030S
+  Copyright 2007-2013 by A10 Networks, Inc.  All A10 Networks products are
+  protected by one or more of the following US patents and patents pending:
+  7716378, 7675854, 7647635, 7552126, 20090049537, 20080229418, 20080040789,
+  20070283429, 20070271598, 20070180101
+
+      64-bit Advanced Core OS (ACOS) version 2.7.1-P1, build 76 (Jun-08-2013,06:49)
+        Booted from Hard Disk primary image
+
+      Serial Number: TH30A73313480008
+      aFleX version: 2.0.0
+      aXAPI version: 2.1
+      Hard Disk primary image (default) version 2.7.1-P1, build 76
+      Hard Disk secondary image version 2.7.1-P1, build 76
+      Last configuration saved at Jul-9-2014, 22:20
+      Hardware: 8 CPUs(Stepping 9), Single 74G Hard disk
+      Memory 16424 Mbyte, Free Memory 9526 Mbyte
+      Hardware Manufacturing Code: 134811
+      Current time is Jul-12-2014, 04:47
+      The system has been up 30 days, 3 hours, 4 minutes
+
+  -->
+      <textBlock start="^\w+\sSeries" end="^The system has been up">
+        <property regex="\s+(.*?)$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+        <property regex="\(ACOS\)\s*version (.*?),">
+          <target table="DiscoveryNetworkNode" column="Version" />
+          <target table="DiscoveryNetworkNode" column="Name" value="ACOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="A10" />
+        </property>
+        <property regex="^\s*Serial Number:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <!--
+System Description................ Dell Ethernet Switch
+System Up Time.................... 271 days, 05h:30m:41s
+System Contact....................
+System Name....................... SMHSTN-B4190-BLDSW1
+System Location...................
+Burned In MAC Address............. 0023.AED9.6528
+System Object ID.................. 1.3.6.1.4.1.674.10895.3015
+System Model ID................... PCM6220
+Machine Type...................... PowerConnect M6220
+
+unit image1      image2      current-active next-active
+<dashes here>
+1    4.1.0.6     5.1.1.7     image2         image2
+      -->
+    <parser id="17" start="^System Description\.+\s*Dell Ethernet Switch">
+      <worksWith>
+        <system vendor="Dell" os="FTOS" model="." version="." />
+      </worksWith>
+      <textBlock start="^System Description" end="^unit\s*image1\s*image2">
+        <property regex="^Burned In MAC Address\.+\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+          <target table="DiscoveryNetworkNode" column="Name" value="FTOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Dell" />
+        </property>
+        <property regex="^System Model ID\.+\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+      </textBlock>
+      <textBlock start="^1" end="">
+        <property regex="^1\s+((\w|\.)+)\s+((\w|\.)+)\s+(image2)\s" required="false">
+          <target table="DiscoveryNetworkNode" column="Version" group="3" />
+        </property>
+        <property regex="^1\s+((\w|\.)+)\s+((\w|\.)+)\s+(image1)\s" required="false">
+          <target table="DiscoveryNetworkNode" column="Version" group="1" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="18" start="^Model\s+Serial #\s+Versions">
+      <!--
+Model           Serial #           Versions
+<dashes here>
+
+C3G124-24       08120385895F       Hw:BCM56504 REV 19
+                                   Bp:01.00.53
+                                   Fw:06.61.12.0005
+                                   BuFw:06.61.11.0006
+                                   CPLD:2.0
+ -->
+      <worksWith>
+        <system vendor="Extreme" os="EnterasysOS" model="^C3" version="." />
+      </worksWith>
+
+      <textBlock start="^\s*Model\s+Serial #\s+Versions" end="">
+        <property regex="^(C3.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="Name" value="EnterasysOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Extreme" />
+        </property>
+        <property regex="^\s*Fw:">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="19" start="^Product name:\s*GigaVUE">
+      <worksWith>
+        <system vendor="Gigamon" os="GigaVUE" model="." version="." />
+      </worksWith>
+      <!--
+Product name:      GigaVUE-H-Series
+Product release:   3.0.04
+Build ID:          #0-dev
+Build date:        2013-09-07 01:21:05
+Target arch:       ppc
+Target hw:         gvcc2
+Built by:          build_master@jenkins-slave006
+Version summary:   GigaVUE-H-Series 3.0.04 #0-dev 2013-09-07 01:21:05 ppc gvcc2 build_master@jenkins-slave006:svn26032
+
+U-Boot version:    2011.06.10
+CPLD version:      df
+TS version:        5456
+
+Product model:     gvcc2
+Product hw:        gvcc2
+Host ID:           576582f3ed2f
+
+Uptime:            38d 21h 43m 14.432s
+CPU load averages: 1.08 / 1.08 / 1.16
+Number of CPUs:    4
+System memory:     312 MB used / 3303 MB free / 3615 MB total
+Swap:              0 MB used / 0 MB free / 0 MB total
+
+  -->
+      <textBlock start="^Product name:" end="">
+        <property regex="^Product release:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^Product model:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+          <target table="DiscoveryNetworkNode" column="Name" value="GigaVUE" />
+          <target table="DiscoveryNetworkNode" column="Vendor" value="Gigamon" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="20" start="^\s*Serial:\s">
+      <worksWith>
+        <system vendor="Trend Micro" os="TPOS" model="." version="." />
+      </worksWith>
+      <!--
+          Serial: 7500NX-50R3-92MD
+        Software: 3.6.2.4103  Build Date: ""Feb 11 2014, 09:59:34"" Production
+ Digital Vaccine: 3.2.0.8535
+    ReputationDV: N/A
+           Model: 7500NX
+      Host Board: D1
+             Rev: A
+
+
+System Boot Time: 2014-05-15 15:38:12 GMT
+Uptime is 8 weeks, 4 days, 2 hours, 39 minutes
+      -->
+      <textBlock start="^\s*Serial" end="^Uptime">
+        <property regex="^\s*Serial:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+        <property regex="^\s*Software:\s*(.*?)\s+Build">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^\s*Model:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+        <property regex="^Digital Vaccine:">
+          <target table="DiscoveryNetworkNode" column="Name" value="TPOS" />
+          <target table="DiscoveryNetworkNode" column="Name" value="Trend Micro" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="21" start="^Image stamp:\s*/sw/">
+      <worksWith>
+        <system vendor="HP" os="ProVision" model="." version="." />
+      </worksWith>
+      <!--
+http://whp-aus1.cold.extweb.hp.com/pub/networking/software/2510-MgmtCfg-July2007-59914761.pdf
+ProCurve(config)# show version
+Image stamp: /sw/code/build/bass(ppne_swt)
+ Mar 17 2006 11:44:02
+ N.10.XX
+ 2624
+Boot Image: Primary
+Build Options: QA
+Watchdog: ENABLED
+    -->
+      <textBlock start="Image stamp" end="Boot Image:">
+        <property regex="^\s+(\d\d\d.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+      </textBlock>
+    </parser>
+    <!--
+ https://www.scribd.com/document/335095229/FireEye-CLI-Reference-Guide-Release-7-9-pdf
+Productname: CMS [licensed]
+Productmodel: FireEyeCMS4400
+Productrelease: CMS (CMS) 7.6.0.347971
+Build ID: #347971
+Build date: 2015-04-26 16:26:55
+Build arch: x86_64Builtby: root@vta114
+Version summary: cms CMS (CMS) 7.6.0.347971 #347971 2015-04-26 16:26:55 x86_64build@vta114:FireEye/mammoth-dev (eng debug)
+Appliance ID: 0025908754E0
+Productmodel: FireEyeCMS4400
+HostID: 67b4b3c43ae6
+System serial num:FM1349CA03R
+System UUID: 49434d53-0200-ba51-e290-51bae290d1a9
+Uptime: 9h 14m 45.180sCPU load averages:0.16 /0.24 /0.30
+Number ofCPUs: 8
+System memory: 1684 MB used /62859 MB free /64543 MB totalSwap: 0 MB used /32768 MB free /32768 MB tota
+   -->
+    <parser id="22" start="^Product name:\s+CMS">
+      <worksWith>
+        <system vendor="FireEye" os="FOS" model="FireEyeCMS" version="." />
+      </worksWith>
+      <textBlock start="^Product model:" end="^System serial num:">
+        <property regex="Product model:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+        <property regex="Product release:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="System serial number:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="23" start="^Product name:\s+Web MPS">
+      <worksWith>
+        <system vendor="FireEye" os="FOS" model="FireEye\d" version="." />
+      </worksWith>
+      <textBlock start="^Product model:" end="^System serial num:">
+        <property regex="Product model:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+        <property regex="Product release:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="System serial number:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="2" name="ShowSysDashInfo" commandId="2" commandType="Discovery">
+    <parser id="1" start="^\*+">
+      <worksWith>
+        <system vendor="Avaya" os="ACLI" model="ERS-8" version="." />
+      </worksWith>
+      <!--
+*******************************************************************************
+Command Execution Time: THU JUN 30 07:07:40 2016 EDT
+*******************************************************************************
+
+General Info :
+
+    SysDescr     : ERS-8810 (7.1.0.104)
+    SysName      : MEADML4710MCN-0202
+    SysUpTime    : 127 day(s), 07:13:35
+    SysContact   : FT MEADE NEC
+    SysLocation  : FT MEADE NEC
+
+Chassis Info :
+
+    Chassis     : 8010
+    Serial#     : SSPNDT1EJC
+    HwRev       : 52
+    H/W Config         : 02
+    NumSlots           : 10
+    NumPorts           : 96
+    GlobalFilter       : enable
+    VlanBySrcMac       : disable
+    ForceTopologyIpFlag: false
+    Ecn-Compatib       : enable
+    max-vlan-resource-reservation : (disable) -> (disable)
+    multicast-resource-reservation : (2048) -> (2048)
+
+                        BaseMacAddr        : 84:83:71:66:60:00
+    MacAddrCapacity : 4096
+    Temperature : 29 C
+    MgmtMacAddr : 84:83:71:66:63:f6
+    System MTU  : 9600
+    clock_sync_time : 60
+
+Power Supply Info :
+
+    Ps#1 Status       : up
+    Ps#1 Type         : ac
+    Ps#1 Description  : 8005 1140/1372W 120/240V AC-DC Power Supply
+    Ps#1 Serial Number: ARTSAF102062
+    Ps#1 Version      : D
+    Ps#1 Part Number  : 314463
+
+    Ps#2 Status       : up
+    Ps#2 Type         : ac
+    Ps#2 Description  : 8005 1140/1372W 120/240V AC-DC Power Supply
+    Ps#2 Serial Number: ARTSAF102087
+    Ps#2 Version      : D
+    Ps#2 Part Number  : 314463
+
+    Ps#3 Status       : up
+
+                        Ps#3 Type         : ac
+    Ps#3 Description  : 8005 1140/1372W 120/240V AC-DC Power Supply
+    Ps#3 Serial Number: ARTSAF102112
+    Ps#3 Version      : D
+    Ps#3 Part Number  : 314463
+
+Power Usage Info :
+    Total Power Available : 3150
+    Total Power Usage     : 1484
+
+Fan Info :
+
+    Fan#1: up, type: highSpeed, air temp: 29 C
+    Fan#2: up, type: highSpeed, air temp: 29 C
+
+Card Info :
+
+    Slot#             FrontType  FrontHw    Oper   Admin  BackType   BackHw
+                                 Version  Status  Status            Version
+        1    12X10GBaseXL-J-SFP       01      up      up    EEDPM3       02
+        2    12X10GBaseXL-J-SFP       01      up      up    EEDPM3       02
+        3    12X10GBaseXL-J-SFP       01      up      up    EEDPM3       02
+        4    12X10GBaseXL-J-SFP       01      up      up    EEDPM3       02
+
+                            5                  CPUR       54 dormant      up      FSFM       51
+        6                  CPUR       53      up      up      FSFM       51
+        7          48X1000BaseX       01      up      up    EEDPM3       02
+
+MezzCard Info :
+
+
+System Error Info :
+
+    Send Authentication Trap  : true
+    Error Code                : 0
+    Error Severity            : 0
+
+Port Lock Info :
+
+    Status       : off
+    LockedPorts  :
+
+Topology Status Info :
+
+    Status       : on
+
+Message Control Info :
+
+
+                        Action                 : suppress-msg
+    Control-Interval       : 5
+    Max-msg-num            : 5
+    Status                 : disable
+
+
+Management Virtual IP Info :
+
+    Status       : disable
+
+
+
+        -->
+      <textBlock start="^GeneralInfo" end="BaseMacAddr">
+        <property regex="^\s*SysDescr\s*:\s*(ERS-8\d+)\s*\((.*?)\)\s*$">
+          <target table="DiscoveryNetworkNode" column="Vendor" value="Avaya" />
+          <target table="DiscoveryNetworkNode" column="OS" value="ACLI" />
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="Version" group="2" />
+        </property>
+        <property regex="BaseMacAddr\s*:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="2" start="^Operation Mode:">
+      <worksWith>
+        <system vendor="Avaya" os="ACLI" model="ERS-[345]" version="." />
+      </worksWith>
+      <!--
+Operation Mode:        Stack, Unit # 2
+Size Of Stack:         4
+Base Unit:             2
+MAC Address:           A4-21-8A-65-FC-01
+PoE Module FW:         4.0.0
+Reset Count:           52
+Last Reset Type:       Power Cycle
+Power Status:          Primary Power
+Autotopology:          Enabled
+Pluggable Port 49:     None
+Pluggable Port 50:     None
+Base Unit Selection:   Base unit using rear-panel switch
+sysDescr:              Ethernet Routing Switch 4550T-PWR
+                       HW:08       FW:5.3.0.3   SW:v5.6.0.009
+                       Mfg Date:20100613    HW Dev:
+Serial #:              LBNNTMMD190MV0
+Operational Software:  FW:5.3.0.3   SW:v5.6.0.009
+Installed software:    FW:5.3.0.3   SW:v5.6.0.009
+Operational license:   Base software
+Installed license:     Base software
+sysObjectID:           1.3.6.1.4.1.45.3.71.4
+sysUpTime:             21 days, 15:17:00
+sysNtpTime:            2015-04-16 11:15:03 GMT+00:00
+sysServices:           6
+sysContact:            NEC_772-6610
+sysName:               EUB00980
+sysLocation:           EUB00980
+Stack sysAssetId:
+Unit sysAssetId:
+        -->
+      <textBlock start="^Operation Mode: " end="^Operational Software:">
+        <property regex="^MAC Address:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+        <property regex="^sysDescr:\s*Ethernet Routing Switch\s+(.*?)\s*">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="Name" value="ACLI" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Avaya" />
+        </property>
+        <property regex="^Operational Software.*SW:(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="3" name="ShowSystemHardware" commandId="3" commandType="Discovery">
+    <parser id="1" start="^CHASSIS HARDWARE INFORMATION">
+      <worksWith>
+        <system vendor="Extreme" os="EnterasysOS" model="^(Matrix N3|S3 Chassis)" version="." />
+      </worksWith>
+      <textBlock start="^\s*Chassis Type:" end="SLOT HARDWARE INFORMATION">
+        <property regex="^\s*Chassis Type:\s*((S3 |Matrix N3).*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="Name" value="EnterasysOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Extreme" />
+        </property>
+      </textBlock>
+      <textBlock start="^\s*Chassis Serial Number:" end="Chassis Serial Number">
+        <property regex="^\s*Chassis Serial Number:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="2" start="^\s*SLOT HARDWARE INFORMATION">
+      <worksWith>
+        <system vendor="Extreme" os="EnterasysOS" model="^D2G" version="." />
+      </worksWith>
+      <textBlock start="^\s*SLOT HARDWARE INFORMATION" end="">
+        <property regex="^\s*Model:\s*((D2G).*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="Name" value="EnterasysOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Extreme" />
+        </property>
+        <property regex="^Serial Number:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+        <property regex="^\s*Base MAC Address:\s*(.*?)\s*$" required="false">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.RawBaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="3" start="^\s*UNIT \d+ HARDWARE INFORMATION">
+      <worksWith>
+        <system vendor="Extreme" os="EnterasysOS" model="^C5" version="." />
+      </worksWith>
+      <!--
+    UNIT 1 HARDWARE INFORMATION
+  <dashes here>
+    Model:              C5G124-48P2
+    Serial Number:          12380498905R
+    Vendor ID:          0xbc00
+    Base MAC Address:       20:B3:99:6F:FF:E2
+    Hardware Version:       BCM56620 REV 18
+    FirmWare Version:       06.61.12.0005
+    Boot Code Version:      02.01.51
+    POE Version:            2_1
+
+    UNIT 2 HARDWARE INFORMATION
+    <dashes here>
+    Model:              C5G124-48P2
+    Serial Number:          12380342905R
+    Vendor ID:          0xbc00
+    Base MAC Address:       20:B3:99:6F:FD:CC
+    Hardware Version:       BCM56620 REV 18
+    FirmWare Version:       06.61.12.0005
+    Boot Code Version:      02.01.51
+    POE Version:            2_1
+          -->
+      <textBlock start="^\s*UNIT \d+ HARDWARE INFORMATION" end="">
+        <property regex="^\s*Model:\s*((C5G).*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="Name" value="EnterasysOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Extreme" />
+        </property>
+        <property regex="^Serial Number:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+        <property regex="^\s*Base MAC Address:\s*(.*?)\s*$" required="false">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="4" name="ShowSysVersionDetail" commandId="4" commandType="Discovery">
+    <parser id="1" start="^Sys::Version">
+      <worksWith>
+        <system vendor="F5" os="TMOS" model="." version="." />
+      </worksWith>
+      <!--
+Sys::Version
+Main Package
+  Product  BIG-IP
+  Version  11.4.1
+  Build    651.0
+  Edition  Hotfix HF5
+  Date     Thu Oct  2 19:38:19 PDT 2014
+
+Kernel
+  Type     Linux
+  Release  2.6.32-220.el6.f5.x86_64
+
+Hotfix ID418889-1
+  ID     ID418889-1
+  Title  tmm.default SEGV in bigproto_proxy_connect(); conn->common_ctx is NULL
+Hotfix ID436673-1
+  ID     ID436673-1
+  Title  FW Release: Update LBH to version 4.04 in Stratos BIG-IP
+Hotfix -->
+      <textBlock start="^Main Package" end="^\s*Date">
+        <property regex="^\s*Product\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="Name" value="TMOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="F5" />
+        </property>
+        <property regex="^\s*Version\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="5" name="UnameDashA" commandId="5" commandType="Discovery">
+    <parser id="1" start="^Darwin">
+      <worksWith>
+        <system vendor="Apple" os="MacOS" model="." version="." />
+      </worksWith>
+      <!-- Darwin VAE-LT374s-MacBook-Pro.local 16.4.0 Darwin Kernel Version 16.4.0: Thu Dec 22 22:53:21 PST 2016; root:xnu-3789.41.3~3/RELEASE_X86_64 x86_64 -->
+      <textBlock start="^Darwin" end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="Name" value="MacOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Apple" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="2" start="^SecureOS">
+      <worksWith>
+        <system vendor="ForcePoint" os="SecureOS" model="Sidewinder" version="." />
+      </worksWith>
+      <!--SecureOS sidewinder.sdev.vae 8.3.2P03 SW_OPS64_SMP Wed May  7 10:59:33 CDT 2014 8.3.2P03-d0a  amd64 -->
+      <textBlock start="^SecureOS" end="">
+        <property regex=".*\s(.*?)\s(\w+)\s*$">
+          <target table="DiscoveryNetworkNode" column="Name" value="SecureOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="ForcePoint" />
+          <target table="DiscoveryNetworkNode" column="Model" value="Sidewinder" />
+          <target table="DiscoveryNetworkNode" column="Version" group="1" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="3" start="^Linux">
+      <worksWith>
+        <system vendor="F5" os="TMOS" model="." version="." />
+      </worksWith>
+      <textBlock start="^Linux" end="">
+        <!-- Linux f5bigip-lb-a-s-1.jmn.com 2.6.32-220.el6.f5.x86_64 #1 SMP Wed Feb 4 14:21:09 PST 2015 x86_64 x86_64 x86_64 GNU/Linux -->
+        <property regex="^Linux (.*?)(\.el[67]\.f5\.x86_64\s)">
+          <target table="DiscoveryNetworkNode" column="Name" value="TMOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="F5" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="6" name="DisplayVersion" commandId="6" commandType="Discovery">
+    <parser id="1" start="^HP Comware Platform Software">
+      <worksWith>
+        <system vendor="HP" os="Comware" model="." version="." />
+      </worksWith>
+      <!--
+      <hp10508-sw-aa12-1>display version
+HP Comware Platform Software
+Comware Software, Version 5.20.105, Release 1208P03-US
+Copyright (c) 2010-2013 Hewlett-Packard Development Company, L.P.
+HP 10508 uptime is 149 weeks, 2 days, 9 hours, 9 minutes
+
+LPU 0:
+Uptime is 69 weeks,3 days,5 hours,7 minutes
+HP 10508 LPU with 1 XLS408 Processor
+BOARD TYPE:         LSU1QGS8SF0
+DRAM:               1024M bytes
+FLASH:              0M bytes
+NVRAM:              0K bytes
+PCB 1 Version:      VER.A
+Bootware Version:   511
+CPLD 1 Version:     001
+Release Version:    HP 10508-1208P03-US
+Patch Version  :    None
+
+LPU 1:
+
+
+          -->
+      <textBlock start="^HP Comware Platform Software" end=".">
+        <property regex="^Comware Software, Version (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+          <target table="DiscoveryNetworkNode" column="Name" value="ComWare" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="HP" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="7" name="ShowSysinfo" commandId="7" commandType="Discovery">
+    <parser id="1" start="^Product Name\.+">
+      <worksWith>
+        <system vendor="Cisco" os="AireOS" model="." version="." />
+      </worksWith>
+      <textBlock start="^Product Name\.+\s*Cisco Controller" end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+          <target table="DiscoveryNetworkNode" column="Name" value="AireOS" />
+        </property>
+        <property regex="^Product Version\.+\s*(\d.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^Burned-in MAC Address\.+\s*(\w.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="8" name="ShowSystemInfo" commandId="8" commandType="Discovery">
+    <parser id="1" start="^hostname:">
+      <worksWith>
+        <system vendor="PaloAlto" os="PANOS" model="." version="." />
+      </worksWith>
+      <!--
+hostname: pa5060-x-aa14
+ip-address: 192.168.2.61
+netmask: 255.255.255.0
+default-gateway: 192.168.22.1
+ipv6-address:
+ipv6-link-local-address: fe80::290:baf:feee:29aa/64
+ipv6-default-gateway:
+mac-address: 00:90:0b:1e:18:0a
+time: Mon Jul 14 17:06:01 2014
+uptime: 90 days, 0:46:27
+family: 5000
+model: PA-5060
+serial: 007901000552
+sw-version: 5.0.9
+global-protect-client-package-version: 0.0.0
+app-version: 412-2059
+app-release-date: unknown
+av-version: 0
+av-release-date: unknown
+threat-version: 412-2059
+threat-release-date: unknown
+wildfire-version: 0
+wildfire-release-date: unknown
+url-filtering-version: 0
+global-protect-datafile-version: 0
+global-protect-datafile-release-date: unknown
+logdb-version: 5.0.2
+platform-family: 5000
+logger_mode: False
+vpn-disable-mode: off
+operational-mode: normal
+multi-vsys: on
+      -->
+      <textBlock start="^hostname:" end="multi-vsys">
+        <property regex="^mac-address:\s*(\w.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+        <property regex="model:\s*([PV][AM]-\d+.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="VendorName" value="PaloAlto" />
+          <target table="DiscoveryNetworkNode" column="Name" value="PANOS" />
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+        </property>
+        <property regex="^sw-version:\s*(\d.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="9" name="ShowSysInfo" commandId="9" commandType="Discovery">
+    <parser id="1" start="^GeneralInfo">
+      <worksWith>
+        <system vendor="Avaya" os="NNCLI" model="." version="." />
+      </worksWith>
+      <textBlock start="^GeneralInfo" end="BaseMacAddr">
+        <property regex="^\s*SysDescr\s*:\s*(ERS-8\d+)\s*\((.*?)\)\s*$">
+          <target table="DiscoveryNetworkNode" column="Vendor" value="Avaya" />
+          <target table="DiscoveryNetworkNode" column="Name" value="NNCLI" />
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="Version" group="2" />
+        </property>
+        <property regex="BaseMacAddr\s*:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="10" name="ShowSystemDashInformation" commandId="10" commandType="Discovery">
+    <parser id="1" start="^\s*Status and Counters - General System Information">
+      <worksWith>
+        <system vendor="HP" os="ProVision" model=".Procurve." version="." />
+      </worksWith>
+      <textBlock start="^\s*Firmware revision" end="Base MAC Address">
+        <property regex="^\s*Firmware revision\s*:\s*(.*?)\s+Base MAC Address\s*:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" group="1" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" group="2" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+          <target table="DiscoveryNetworkNode" column="Vendor" value="HP" />
+          <target table="DiscoveryNetworkNode" column="Name" value="ProVision" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="12" name="GetSys" commandId="12" commandType="Discovery">
+    <parser id="1" start="System\s*model\s*\(\s*\S+\.\S+\s*\)\s*=\s*HP\s*SMS">
+      <worksWith>
+        <system vendor="Trend Micro" os="TPSMSOS" model="." version="." />
+      </worksWith>
+      <!--
+System model (sys.model ) = HP SMS
+System contact (sys.contact ) = Brit
+System location (sys.location ) = First floor lab
+System name (sys.name ) = sms25
+System serial number (sys.serialNum) = X-SMA-ST-SMS25-0001
+          -->
+      <textBlock start="System\s*model\s*\(\s*\S+\.\S+\s*\)\s*=\s*HP\s*SMS" end="">
+        <property>
+          <target table="DiscoveryNetworkNode" column="Model" value="HP SMS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Trend Micro" />
+          <target table="DiscoveryNetworkNode" column="Name" value="TPSMSOS" />
+        </property>
+        <property regex="^\s*System serial number.*=\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="13" name="ShowSysConfig" commandId="13" commandType="Discovery">
+    <parser id="1" start="^Model:\s+SLC\d+\s+">
+      <worksWith>
+        <system vendor="Lantronix" os="LOS" model="." version="." />
+      </worksWith>
+      <textBlock start="^Model:\s+SLC\d+\s+" end="^Network Settings\s*$">
+        <property>
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Lantronix" />
+          <target table="DiscoveryNetworkNode" column="Name" value="LOS" />
+        </property>
+        <property regex="^Model:\s*(SLC\d+)">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+        <property regex="^Firmware Version:(.*?)\s+">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="\s+S/N:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="14" name="Version" commandId="14" commandType="Discovery">
+    <parser id="1" start="^Current Version">
+      <worksWith>
+        <system vendor="Cisco" os="AsyncOS" model="." version="." />
+      </worksWith>
+      <!-- http://www.cisco.com/c/dam/en/us/td/docs/security/esa/esa7-1/cli_guide/ESA_7-1_FCS_CLI_Reference_Guide.pdf -->
+      <!--
+
+Current Version
+===============
+Model: C60
+Version: 4.5.0-316
+Build Date: 2005-04-13
+Install Date: 2005-04-14 13:32:20
+Serial #: XXXXXXXXXXXX-XXXXXXX
+BIOS: A15I
+RAID: 2.7-1 3170
+RAID Status: Okay
+RAID Type: 10
+mail3.example.com>
+-->
+
+      <textBlock start="Model: " end="Serial #:">
+        <property regex="^Model:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Name" value="AsyncOS" />
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Cisco" />
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+        </property>
+        <property regex="^Version:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^Serial #:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="2" start="^\s*\w">
+      <worksWith>
+        <system vendor="Trend Micro" os="TPSMSOS" model="." version="." />
+      </worksWith>
+      <!-- no output available just get any output -->
+      <textBlock start="^\s*\w" end="^\s*\w">
+        <property regex="^\s*(\w.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="15" name="GetSystem" commandId="15" commandType="Discovery">
+    <parser id="1" start="^Product Name: ">
+      <worksWith>
+        <system vendor="Juniper" os="ScreenOS" model="." version="." />
+      </worksWith>
+      <textBlock start="^Product Name:\s(SSG-\d|Netscreen)" end="^Interface ">
+        <property>
+          <target table="DiscoveryNetworkNode" column="VendorName" value="Juniper" />
+          <target table="DiscoveryNetworkNode" column="Name" value="ScreenOS" />
+        </property>
+        <property regex="^Product Name:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+        <property regex="^Software Version:\s*(.*?),">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+        <property regex="^Base Mac:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="16" name="ShowInventory" commandId="16" commandType="Discovery">
+    <parser id="1" start="^Burned-in MAC Address">
+      <worksWith>
+        <system vendor="Cisco" os="AireOS" model="." version="." />
+      </worksWith>
+      <textBlock start="^Burned-in MAC Address" end="^PID:">
+        <!-- well bounded because we are discovery -->
+        <property regex="^PID:\s*(.*?),">
+          <target table="DiscoveryNetworkNode" column="Model" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="2" start="Application Control Engine Service Module">
+      <worksWith>
+        <system vendor="Cisco" os="ACSW" model="." version="." />
+      </worksWith>
+      <textBlock start="Application Control Engine Service Module" end="^PID">
+        <!-- this will be the case of parent child submodule to module i.e. nested text-blocks -->
+        <!-- NAME: "module 3", DESCR: "Application Control Engine Service Module"
+               PID: ACE30-MOD-K9      , VID: 1.0, SN: SAL1618BP0B
+          -->
+        <property regex="^PID:\s*(.*?)\s+, VID:(.*?SN:\s+)(\w.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" group="3" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="HardwareInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+    <parser id="3" start="DESCR:\s*.ASR \d\d\d\d, Route Switch Processor with">
+      <worksWith>
+        <system vendor="Cisco" os="IOS-XR" model="." version="." />
+      </worksWith>
+      <textBlock start="DESCR:\s*.ASR \d\d\d\d, Route Switch Processor with" end="PID:\s">
+        <property regex="^PID:\s*(.*?)\s+, VID:(.*?SN:\s+)(\w.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" group="3" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="HardwareInventory.SerialNumber" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="17" name="SystemUnderScoreProfilerSPSoftwareDataType" commandId="17" commandType="Discovery">
+    <parser id="1" start="System Version">
+      <worksWith>
+        <system vendor="Apple" os="MacOS" model="." version="." />
+      </worksWith>
+      <!-- System Version: macOS 10.12.3 (16D32) -->
+      <textBlock start="System Version:" end="">
+        <property regex="System Version: macOS (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Version" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="18" name="SystemUnderScoreProfilerSPHardwareDataType" commandId="18" commandType="Discovery">
+    <parser id="1" start="Hardware">
+      <worksWith>
+        <system vendor="Apple" os="MacOS" model="." version="." />
+      </worksWith>
+      <!-- Hardware:
+    Hardware Overview:
+
+      Model Name: MacBook Pro
+      Model Identifier: MacBookPro11,3
+      Processor Name: Intel Core i7
+      Processor Speed: 2.5 GHz
+      Number of Processors: 1
+      Total Number of Cores: 4
+      L2 Cache (per Core): 256 KB
+      L3 Cache: 6 MB
+      Memory: 16 GB
+      Boot ROM Version: MBP112.0138.B21
+      SMC Version (system): 2.19f12
+      Serial Number (system): X02P7CGKK3QD
+      Hardware UUID: 0F0B6EDC-ZZFD-5728-0000-2B00A9FB7DE0-->
+      <textBlock start="Model Identifier:" end="Hardware UUID:">
+        <property regex="Model Identifier: (.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="Model" group="1" />
+        </property>
+        <property regex="Hardware UUID:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.UUID" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="100" name="ShowCatalyst6000ChassisDashMacDashAddresses" commandId="100"
+                       commandType="Fingerprint">
+    <parser id="1">
+      <worksWith>
+        <system vendor="Cisco" os="IOS" model="WS-C65\d\d" version="." />
+      </worksWith>
+      <!-- chassis MAC addresses: 64 addresses from f872.eab7.2800 to f872.eab7.283f -->
+      <textBlock start="chassis MAC addresses:" end="">
+        <property regex="chassis MAC addresses: \d+ addresses from (.*?)\s*to\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="101" name="ShowIdPROMAll" commandId="101" commandType="Fingerprint">
+    <parser id="1">
+      <worksWith>
+        <system vendor="Cisco" os="IOS" model="WS-C45\d\d" version="." />
+      </worksWith>
+      <!--
+    Chassis Idprom :
+ Common Block Signature = 0xABAB
+ Common Block Version = 1
+ Common Block Length = 144
+ Common Block Checksum = 4251
+ Idprom Size = 256
+ Block Count = 2
+ FRU Major Type = 0x4001
+ FRU Minor Type = 35
+ OEM String = Cisco Systems, Inc.
+ Product Number = WS-C4507R
+ Serial Number = FOX092804ZN
+ Part Number = 73-6982-05
+ Part Revision = A0
+ Manufacturing Deviation String = 0
+ Hardware Revision = 5.0
+ Manufacturing Bits = 0x0000
+ Engineering Bits = 0x0000
+ Snmp OID = 0.0.0.0.0.0.0.0
+ Power Consumption = 0
+ RMA Failure Code = 0 0 0 0
+ Chassis Block Signature = 0x4001
+ Chassis Block Version = 1
+ Chassis Block Length = 22
+ Chassis Block Checksum = 612
+ Feature Bits = 0x0000000000000000
+ MAC Base = 0015.62a4.3180
+ MAC Count = 64
+ -->
+      <textBlock start="Chassis Idprom" end="">
+        <property regex="MAC Base =\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="102" name="ShowCDPInternalGlobalDashInfo" commandId="102" commandType="Fingerprint">
+    <parser id="1">
+      <worksWith>
+        <system vendor="Cisco" os="NX-OS" model="." version="." />
+      </worksWith>
+      <!--
+    c5548-d01-fshtx-899-125-xxyy-1# show cdp internal global-info
+<dashes>
+system_name: c5548-d01-899-125-xxyy-1 , valid: yes
+domain_name: blah.deedah , valid: yes
+fqdn: c5548-d01-899-125-xxyy-1.blah.deedah
+syslocation:  , valid: yes
+device serial num: SSI17300ASZ
+device mac addr: [00.2a.6a.7a.1b.60]
+cdpd_pktmgr_register_done: yes  cdpd_vtp_up: no
+vtpdomainname_valid: no   cdpd_vlan_mgr_up: no
+svi info, num_if: 2 :
+if_index: 0x9010238, inet_addr: [10.161.6.69]
+cpd fabric_port, rx:0 , tx:0
+<dashes>
+    -->
+      <textBlock start="device mac addr: [" end="">
+        <property regex="device mac addr:\s*[(.*?)\]">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="103" name="ShowSNMPMIBGetDot1dBaseBridgeAddressDot0" commandId="103"
+                       commandType="Fingerprint">
+    <parser id="1">
+      <worksWith>
+        <system vendor="Juniper" os="JUNOS" model="." version="." />
+      </worksWith>
+      <!--  dot1dBaseBridgeAddress.0 = 78 fe 3d 3d  c5 01 -->
+      <textBlock start="^dot1dBaseBridge" end="">
+        <property regex="=\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="106" name="ShowLLDPLocal" commandId="106" commandType="Fingerprint">
+    <parser id="1">
+      <worksWith>
+        <system vendor="HP" os="Comware" model="." version="." />
+      </worksWith>
+      <!--
+Global LLDP local-information:
+  Chassis ID         : b8af-6764-8d36
+  System name        : hp10508-sw-a-aa12-1
+  System description : HP Comware Platform Software, Software Version 5.20, Release 1208P03-US
+HP 10508
+Copyright (c) 2010-2013 Hewlett-Packard Development Company, L.P.
+  System capabilities supported : Bridge,Router
+  System capabilities enabled   : Bridge,Router
+
+  MED information
+  Device class: Connectivity device
+
+  (MED inventory information of master board)
+  HardwareRev               : VER.A
+  FirmwareRev               : 200
+  SoftwareRev               : 10500-CMW-1208P03-US
+  SerialNum                 : SG39FSS00D
+-->
+
+      <textBlock start="Global LLDP local-information" end="Serial">
+        <property regex="^\s*Chassis ID\s*:\s*(.*?)\s*$">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="107" name="ShowSysMacDashAddress" commandId="107" commandType="Fingerprint">
+    <parser id="1">
+      <worksWith>
+        <system vendor="F5" os="TMOS" model="." version="." />
+      </worksWith>
+      <!--
+dashes are here!!
+Sys::MAC Address
+Entry              Component              Object-ID                               Property
+dashes are here!!
+00:23:e9:17:f6:00  cm device              f5bigip-lb-a-yyyyy-xxxx-aa12-1.jmn.mil  base-mac
+00:23:e9:17:f6:00  sys hardware platform  n/a                                     base-mac
+00:23:e9:17:f6:1d  net interface          1/1.1                                   mac-address
+00:23:e9:17:f6:1e  net interface          1/1.10                                  mac-address
+-->
+      <textBlock start="sys hardware platform(.*)base-mac" end="sys hardware platform">
+        <property regex="^\s*(.*?) sys hardware platform">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+  <commandOutputParser id="108" name="NetstatDashIn" commandId="108" commandType="Fingerprint">
+    <parser id="1">
+      <worksWith>
+        <system vendor="ForcePoint" os="SecureOS" model="Sidewinder" version="." />
+      </worksWith>
+      <!--
+Name    Mtu Network       Address              Ipkts Ierrs    Opkts Oerrs  Coll
+1-0    1500 <Link#1>      ec:9e:cd:0c:8d:f0   363997     0   315519     0     0
+1-1    1500 <Link#2>      ec:9e:cd:0c:8d:f1   113000     0        3     0     0
+1-2*   1500 <Link#3>      ec:9e:cd:0c:8d:f2        0     0        0     0     0
+1-3*   1500 <Link#4>      ec:9e:cd:0c:8d:f3        0     0        0     0     0
+lo0   16384 <Link#5>                            7368     0     7368     0     0
+lo0   16384 127.0.0.0/8   127.0.0.1             7368     -     7368     -     -
+lo0   16384 ::1/128       ::1                      0     -        0     -     -
+lo2   16384 <Link#6>                               0     0        0     0     0
+lo2   16384 127.0.0.0/8   127.2.0.1                0     -        0     -     -
+lo1   16384 <Link#7>                               0     0        0     0     0
+lo1   16384 127.0.0.0/8   127.1.0.1                0     -        0     -     -
+vlan0  1500 <Link#8>      ec:9e:cd:0c:8d:f1        0     0        6     0     0
+vlan0  1500 10.110.0.0/23 10.110.1.50              0     -        0     -     -
+vlan1  1500 <Link#9>      ec:9e:cd:0c:8d:f0   363997     0   315522     0     0
+vlan1  1500 10.130.10.0/2 10.130.10.18        251005     -   314765     -     -
+sidewinder:AdRO {35} %
+-->
+      <textBlock start="Link#1" end="Link#1">
+        <property regex="^\d+\-\d+\s+\d+\s.Link#1.\s+(.*?)\s">
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifier" />
+          <target table="DiscoveryNetworkNode" column="UniqueIdentifierType" value="ChassisInventory.BaseMACAddress" />
+        </property>
+      </textBlock>
+    </parser>
+  </commandOutputParser>
+</parserCollection>
